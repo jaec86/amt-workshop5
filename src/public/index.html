@@ -9,6 +9,7 @@
     <link rel="icon" type="image/png" href="https://1348661504.rsc.cdn77.org/.publisher/sd/utwente_base/ws2016/img/favicons/favicon-16x16.png" sizes="16x16">
     <link rel="manifest" href="https://1348661504.rsc.cdn77.org/.publisher/sd/utwente_base/ws2016/img/favicons/manifest.json">
     <meta name="theme-color" content="#ffffff">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@700&display=swap" rel="stylesheet">
     <title>Webcam Audio Visualizer</title>
     <style type="text/css">
         html {
@@ -25,11 +26,84 @@
             padding: 0;
             width: 100vw;
             height: 100vh;
+            color: #2D3748;
+            font-family: 'Raleway', 'sans-serif';
+        }
+
+        .title {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            padding: 1.5rem;
+            width: 100%;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transform: translateX(-50%);
+        }
+
+        #message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            padding: 1.5rem;
+            width: calc(100% - 2rem);
+            max-width: 25rem;
+            border-radius: 0.25rem;
+            background-color: #ffffff;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translate(-50%, -50%);
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #E2E8F0;
+            opacity: 0;
+            transition: all 500ms 500ms ease;
+        }
+
+        .loader div {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-style: solid;
+            border-radius: 2rem;
+            border-width: 0.3rem;
+            border-color: #2D3748;
+            border-bottom-color: #718096;
+            animation: rotate 750ms linear infinite;
+        }
+
+        .loading .loader {
+            opacity: 1;
+        }
+
+        @keyframes rotate {
+          from { transform: translate(-50%, -50%) rotate(0deg); }
+          to { transform: translate(-50%, -50%) rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <canvas id="visualizer"></canvas>
+    <video id="video" class="hide"></video>
+    <div class="title">Webcam Audio Visualizer</div>
+    <div id="message" class="hide">Please allow camera access</div>
+    <div class="loader">
+        <div></div>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>
