@@ -8,7 +8,7 @@ module.exports = {
     filename: 'app.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  devtool: process.env.NODE_ENV === 'production' ? null : 'inline-source-map',
+  devtool: process.env.NODE_ENV === 'production' ? 'none' : 'inline-source-map',
   devServer: {
     contentBase: './dist',
     writeToDisk: true
