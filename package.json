@@ -1,0 +1,23 @@
+{
+  "name": "amt-workshop5",
+  "version": "1.0.0",
+  "description": "Webcam Audio Visualizer",
+  "main": "index.js",
+  "author": {
+    "name": "Javier Estupinan",
+    "email": "jestupinan@zeerbyte.com",
+    "url": "https://zeerbyte.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "cross-env NODE_ENV=development webpack-dev-server --open",
+    "build": "cross-env NODE_ENV=production webpack"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^6.0.1",
+    "cross-env": "^7.0.2",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.11.0"
+  }
+}
