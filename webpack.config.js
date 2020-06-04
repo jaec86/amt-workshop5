@@ -3,9 +3,12 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
-  entry: './src/js/app.js',
+  entry: {
+    app: './src/js/app.js',
+    app2: './src/js/app2.js'
+  },
   output: {
-    filename: 'app.js',
+    filename: '[name].js',
     path: path.resolve(__dirname, 'dist'),
   },
   devtool: process.env.NODE_ENV === 'production' ? 'none' : 'inline-source-map',

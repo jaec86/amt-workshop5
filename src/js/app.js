@@ -1,207 +1,203 @@
-import * as THREE from 'three'
+import p5 from 'p5'
+import Tone from 'tone'
 
-class App {
-  constructor () {
-    this.canvas = document.createElement('canvas')
+const s = (sketch) => {
+
+  let synth
+
+  let playing = false
+
+  let sequence
+
+  let currentColumn = 0
+
+  const notes = ['A3', 'C4', 'D4', 'E3', 'G4']
+
+  const numRows = notes.length
+
+  const numCols = 16
+
+  const noteInterval = `${numCols}n`
+
+  Tone.Transport.bpm.value = 120
+
+  const data = []
+
+  for (let y = 0; y < numRows; y++) {
+    const row = []
+    for (let x = 0; x < numCols; x++) {
+      row.push(0)
+    }
+    data.push(row)
   }
 
-  init () {
-    document.body.classList.add('loading')
+  sketch.setup = async () => {
+    const dim = sketch.min(sketch.windowWidth, sketch.windowHeight)
+    sketch.createCanvas(dim, dim)
+    sketch.pixelDensity(window.devicePixelRatio)
+    sketch.background(226, 232, 240)
 
-    this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0xE2E8F0)
+    const reverb = new Tone.Reverb({ decay: 4, wet: 0.2, preDelay: 0.25 })
+    await reverb.generate()
 
-    this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 0.1, 10000)
-    this.camera.position.set(0, 0, Math.min(window.innerWidth, window.innerHeight))
-    this.camera.lookAt(0, 0, 0)
+    const effect = new Tone.FeedbackDelay(`${Math.floor(numCols / 2)}n`, 1 / 3)
+    effect.wet.value = 0.2
 
-    this.scene.add(this.camera)
+    synth = new Tone.PolySynth(numRows, Tone.DuoSynth)
+    synth.set({
+      voice0: {
+        oscillator: {
+          type: "triangle4"
+        },
+        volume: -30,
+        envelope: {
+          attack: 0.005,
+          release: 0.05,
+          sustain: 1
+        }
+      },
+      voice1: {
+        volume: -10,
+        envelope: {
+          attack: 0.005,
+          release: 0.05,
+          sustain: 1
+        }
+      }
+    })
 
-    this.renderer = new THREE.WebGLRenderer()
-    document.body.prepend(this.renderer.domElement)
+    synth.volume.value = -10
+    synth.connect(effect)
+    synth.connect(Tone.Master)
+    effect.connect(reverb)
+    reverb.connect(Tone.Master)
 
-    this.clock = new THREE.Clock()
+    Tone.Transport.scheduleRepeat(() => {
+      sketch.randomizeSequencer()
+    }, '2m')
+  }
 
-    this.resize()
+  sketch.draw = () => {
+    if (!synth) return
 
-    if (navigator.mediaDevices) {
-      this.initAudio()
-      this.initVideo()
+    const dim = sketch.min(sketch.width, sketch.height)
+
+    sketch.background(226, 232, 240)
+
+    if (playing) {
+      const margin = dim * 0.2
+      const innerSize = dim - margin * 2
+      const cellSize = innerSize / numCols
+
+      for (let y = 0; y < data.length; y++) {
+        const row = data[y]
+        for (let x = 0; x < row.length; x++) {
+          const u = x / (numCols - 1)
+          const v = y / (numRows - 1)
+          let px = sketch.lerp(margin, dim - margin, u)
+          let py = sketch.lerp(margin, dim - margin, v)
+
+          sketch.noStroke()
+          sketch.noFill()
+
+          if (row[x] === 1) {
+            sketch.fill(45, 55, 72)
+          } else {
+            sketch.stroke(45, 55, 72)
+          }
+
+          sketch.circle(px, py, cellSize / 2)
+
+          if (x === currentColumn) {
+            sketch.rectMode(sketch.CENTER)
+            sketch.rect(px, py, cellSize, cellSize)
+          }
+        }
+      }
     } else {
-      document.getElementById('message').classList.remove('hide')
+      sketch.noStroke()
+      sketch.fill(45, 55, 72)
+      sketch.polygon(sketch.width / 2, sketch.height / 2, dim * 0.05, 3)
     }
-
-    this.draw()
-
-    window.addEventListener('resize', this.resize.bind(this))
   }
 
-  initAudio () {
-    const audioListener = new THREE.AudioListener()
-    const audio = new THREE.Audio(audioListener)
-
-    const audioLoader = new THREE.AudioLoader()
-    audioLoader.load('Cubic_Z.mp3', buffer => {
-      document.body.classList.remove('loading')
-      audio.setBuffer(buffer)
-      audio.setLoop(true)
-      audio.setVolume(0.5)
-      audio.play()
-    })
-
-    this.analyzer = new THREE.AudioAnalyser(audio, 2048)
-
-    document.body.addEventListener('click', () => {
-      if (audio && audio.isPlaying) {
-        audio.pause()
-      } else {
-        audio.play()
+  sketch.randomizeSequencer = () => {
+    const chance = sketch.random(0.5, 1.5)
+    for (let y = 0; y < data.length; y++) {
+      const row = data[y]
+      for (let x = 0; x < row.length; x++) {
+        row[x] = sketch.randomGaussian() > chance ? 1 : 0
       }
-    })
-  }
-
-  async initVideo () {
-    this.video = document.getElementById('video')
-    this.video.autoplay = true
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-      this.video.srcObject = stream
-      this.video.addEventListener('loadeddata', () => {
-        this.createParticles()
-      })
-    } catch (error) {
-      document.getElementById('message').classList.remove('hide')
-    }
-  }
-
-  createParticles () {
-    const imageData = this.getImageData(this.video)
-
-    const geometry = new THREE.Geometry()
-    geometry.morphAttributes = {}
-
-    const material = new THREE.PointsMaterial({
-      size: 1,
-      color: 0x805AD5,
-      sizeAttenuation: false
-    })
-
-    this.width = imageData.width
-    this.height = imageData.height
-
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
-        const vertex = new THREE.Vector3(x - imageData.width / 2, -y + imageData.height / 2, 0)
-        geometry.vertices.push(vertex)
+      for (let x = 0; x < row.length - 1; x++) {
+        if (row[x] === 1 && row[x + 1] === 1) {
+          row[x + 1] = 0
+          x++
+        }
       }
     }
-
-    this.particles = new THREE.Points(geometry, material)
-    this.scene.add(this.particles)
   }
 
-  getImageData (video, useCache) {
-    if (useCache && this.imageCache) {
-      return this.imageCache
-    }
-
-    this.canvas.width = video.videoWidth
-    this.canvas.height = video.videoHeight
-
-    const ctx = this.canvas.getContext('2d')
-    ctx.translate(video.videoWidth, 0)
-    ctx.scale(-1, 1)
-    ctx.drawImage(video, 0, 0)
-
-    this.imageCache = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight)
-
-    return this.imageCache
+  sketch.windowResized = () => {
+    const dim = sketch.min(sketch.windowWidth, sketch.windowHeight)
+    sketch.resizeCanvas(dim, dim)
   }
 
-  draw () {
-    let bass, mid, treble
+  sketch.mousePressed = () => {
+    if (!synth) return
 
-    if (this.analyzer) {
-      const data = this.analyzer.getFrequencyData()
+    if (playing) {
+      playing = false
+      sequence.stop()
+      Tone.Transport.stop()
+    } else {
+      const noteIndices = sketch.newArray(numCols)
+      sequence = new Tone.Sequence(sketch.onSequenceStep, noteIndices, noteInterval)
 
-      bass = this.getFrequencyRangeValue(data, [20, 140])
-      mid = this.getFrequencyRangeValue(data, [400, 2600])
-      treble = this.getFrequencyRangeValue(data, [5200, 14000])
+      playing = true
+      sequence.start()
+      Tone.Transport.start()
     }
+  }
 
-    if (this.particles) {
-      this.particles.material.color.r = 1 - bass
-      this.particles.material.color.g = 1 - mid
-      this.particles.material.color.b = 1 - treble
+  sketch.onSequenceStep = (time, column) => {
+    let notesToPlay = []
 
-      const useCache = this.clock.getDelta % 2 === 0 
-      const imageData = this.getImageData(video, useCache)
-
-      for (let i = 0; i < this.particles.geometry.vertices.length; i++) {
-        const particle = this.particles.geometry.vertices[i]
-
-        if (i % 2 === 0) {
-          particle.z = 10000
-          continue
-        }
-
-        const index = i * 4
-        const grey = (imageData.data[index] + imageData.data[index + 1] + imageData.data[index + 2]) / 3
-
-        if (grey < 100) {
-          particle.z = grey * bass * 5
-        }
-
-        if (grey < 150) {
-          particle.z = grey * mid * 5
-        }
-
-        if (grey < 300) {
-          particle.z = grey * treble * 5
-        }
-
-        if (grey >= 300) {
-          particle.z = 10000
-        }
+    data.forEach((row, rowIndex) => {
+      const isOn = row[column] == 1
+      if (isOn) {
+        const note = notes[rowIndex]
+        notesToPlay.push(note)
       }
-
-      this.particles.geometry.verticesNeedUpdate = true
-    }
-
-    this.renderer.render(this.scene, this.camera)
-
-    requestAnimationFrame(this.draw.bind(this))
+    })
+    const velocity = sketch.random(0.5, 1)
+    synth.triggerAttackRelease(notesToPlay, noteInterval, time, velocity)
+    Tone.Draw.schedule(function() {
+      currentColumn = column
+    }, time)
   }
 
-  getFrequencyRangeValue (data, frequencyRange) {
-    const lowIndex = Math.round(frequencyRange[0] / 24000 * data.length)
-    const highIndex = Math.round(frequencyRange[1] / 24000 * data.length)
+  sketch.polygon = (x, y, radius, sides = 3, angle = 0) => {
+    sketch.beginShape()
 
-    let total = 0
-    let frequencyCount = 0
-
-    for (let i = lowIndex; i <= highIndex; i++) {
-      total += data[i]
-      frequencyCount++
+    for (let i = 0; i < sides; i++) {
+      const a = angle + sketch.TWO_PI * (i / sides)
+      let sx = x + sketch.cos(a) * radius
+      let sy = y + sketch.sin(a) * radius
+      sketch.vertex(sx, sy)
     }
 
-    return total / frequencyCount / 255
+    sketch.endShape(sketch.CLOSE)
   }
 
-  resize() {
-    this.width = window.innerWidth
-    this.height = window.innerHeight
+  sketch.newArray = (n) => {
+    const array = []
 
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.setSize(this.width, this.height)
+    for (let i = 0; i < n; i++) {
+      array.push(i)
+    }
 
-    this.camera.aspect = this.width / this.height
-    this.camera.updateProjectionMatrix()
+    return array
   }
 }
 
-window.addEventListener('DOMContentLoaded', e => {
-  const app = new App()
-  app.init()
-})
+let myp5 = new p5(s, 'canvas')
