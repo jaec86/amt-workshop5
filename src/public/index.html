@@ -47,21 +47,36 @@
             transform: translateX(-50%);
         }
 
-        .message {
+        .bottom {
+            display: flex;
+            justify-content: space-between;
             position: fixed;
             bottom: 0;
-            left: 50%;
             padding: 1.5rem;
             width: 100%;
+        }
+
+        .message {
             font-size: 0.875rem;
-            text-align: center;
-            transform: translateX(-50%);
+        }
+
+        .link {
+            text-transform: uppercase;
+            color: #805AD5;
+            letter-spacing: 0.1em;
+        }
+
+        .link:hover {
+            color: #6B46C1;
         }
     </style>
 </head>
 <body>
     <div class="title">Generative Melodies</div>
-    <div class="message">click to start / stop</div>
+    <div class="bottom">
+        <div class="message">click to start / stop</div>
+        <a href="index2.html" class="link">check audio visualizer</a>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>

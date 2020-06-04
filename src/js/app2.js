@@ -46,7 +46,6 @@ class App {
       audio.setBuffer(buffer)
       audio.setLoop(true)
       audio.setVolume(0.5)
-      audio.play()
     })
 
     this.analyzer = new THREE.AudioAnalyser(audio, 2048)
